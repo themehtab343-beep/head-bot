@@ -1,6 +1,6 @@
 import asyncio
 import secrets
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatJoinRequest
 from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID
 import database as db
@@ -30,8 +30,8 @@ async def handle_text(client, message):
 async def main():
     await app.start()
     print("Bot is running...")
-    await asyncio.Event().wait()
+    await idle()
+    await app.stop()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())
