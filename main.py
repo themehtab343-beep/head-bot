@@ -1,10 +1,12 @@
+import os
 import asyncio
 import secrets
+from aiohttp import web
 from pyrogram import Client, filters, idle
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatJoinRequest
 from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID
 import database as db
 
+# Pyrogram Client Setup
 app = Client("head_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start") & filters.private)
@@ -27,11 +29,26 @@ async def handle_text(client, message):
         else:
             await message.reply_text("Invalid or used key.")
 
-async def main():
+# Web server dummy response for Render health checks
+async def handle_web(request):
+    return web.Response(text="Bot is running live!")
+
+async def start_services():
+    # Start web server
+    server = web.Application()
+    server.router.add_get("/", handle_web)
+    runner = web.AppRunner(server)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
+    # Start Pyrogram Bot
     await app.start()
-    print("Bot is running...")
+    print("Bot started successfully!")
     await idle()
     await app.stop()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    loop.run_until_complete(start_services())
