@@ -1,24 +1,25 @@
 import os
-import asyncio
-from aiohttp import web
-from hydrogram import Client, filters, idle
+import secrets
+from fastapi import FastAPI
+import uvicorn
+from hydrogram import Client, filters
 from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID
 import database as db
 
-app = Client("head_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+web_app = FastAPI()
+bot_app = Client("head_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-@app.on_message(filters.command("start") & filters.private)
+@bot_app.on_message(filters.command("start") & filters.private)
 async def start_cmd(client, message):
     await message.reply_text("Welcome! Send your access key to set up your bot.")
 
-@app.on_message(filters.command("genkey") & filters.user(OWNER_ID))
+@bot_app.on_message(filters.command("genkey") & filters.user(OWNER_ID))
 async def gen_key(client, message):
-    import secrets
     key = f"KEY-{secrets.token_hex(4).upper()}"
     await db.add_key(key)
     await message.reply_text(f"Generated Key: `{key}`")
 
-@app.on_message(filters.private & filters.text)
+@bot_app.on_message(filters.private & filters.text)
 async def handle_text(client, message):
     text = message.text.strip()
     if text.startswith("KEY-"):
@@ -28,24 +29,18 @@ async def handle_text(client, message):
         else:
             await message.reply_text("Invalid or used key.")
 
-async def handle_web(request):
-    return web.Response(text="Bot Alive!")
+@web_app.on_event("startup")
+async def start_bot():
+    await bot_app.start()
 
-async def main():
-    # Web server logic for Render
-    server = web.Application()
-    server.router.add_get("/", handle_web)
-    runner = web.AppRunner(server)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
+@web_app.on_event("shutdown")
+async def stop_bot():
+    await bot_app.stop()
 
-    # Start Hydrogram Client
-    await app.start()
-    print("Bot is live and running!")
-    await idle()
-    await app.stop()
+@web_app.get("/")
+def read_root():
+    return {"status": "Bot Alive"}
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run(web_app, host="0.0.0.0", port=port)
