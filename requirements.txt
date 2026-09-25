@@ -2,4 +2,5 @@ hydrogram
 tgcrypto
 motor
 dnspython
-aiohttp
+uvicorn
+fastapi
