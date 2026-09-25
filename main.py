@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatJoinRequest
 from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID
@@ -12,7 +13,6 @@ async def start_cmd(client, message):
 
 @app.on_message(filters.command("genkey") & filters.user(OWNER_ID))
 async def gen_key(client, message):
-    import secrets
     key = f"KEY-{secrets.token_hex(4).upper()}"
     await db.add_key(key)
     await message.reply_text(f"Generated Key: `{key}`")
@@ -27,5 +27,11 @@ async def handle_text(client, message):
         else:
             await message.reply_text("Invalid or used key.")
 
+async def main():
+    await app.start()
+    print("Bot is running...")
+    await asyncio.Event().wait()
+
 if __name__ == "__main__":
-    app.run()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
