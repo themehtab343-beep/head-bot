@@ -1,12 +1,10 @@
 import os
 import asyncio
-import secrets
 from aiohttp import web
-from pyrogram import Client, filters, idle
+from hydrogram import Client, filters, idle
 from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID
 import database as db
 
-# Pyrogram Client Setup
 app = Client("head_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 @app.on_message(filters.command("start") & filters.private)
@@ -15,6 +13,7 @@ async def start_cmd(client, message):
 
 @app.on_message(filters.command("genkey") & filters.user(OWNER_ID))
 async def gen_key(client, message):
+    import secrets
     key = f"KEY-{secrets.token_hex(4).upper()}"
     await db.add_key(key)
     await message.reply_text(f"Generated Key: `{key}`")
@@ -29,12 +28,11 @@ async def handle_text(client, message):
         else:
             await message.reply_text("Invalid or used key.")
 
-# Web server dummy response for Render health checks
 async def handle_web(request):
-    return web.Response(text="Bot is running live!")
+    return web.Response(text="Bot Alive!")
 
-async def start_services():
-    # Start web server
+async def main():
+    # Web server logic for Render
     server = web.Application()
     server.router.add_get("/", handle_web)
     runner = web.AppRunner(server)
@@ -43,12 +41,11 @@ async def start_services():
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
 
-    # Start Pyrogram Bot
+    # Start Hydrogram Client
     await app.start()
-    print("Bot started successfully!")
+    print("Bot is live and running!")
     await idle()
     await app.stop()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop_policy().get_event_loop()
-    loop.run_until_complete(start_services())
+    asyncio.run(main())
